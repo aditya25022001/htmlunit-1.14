@@ -321,6 +321,16 @@ public final class HtmlPage extends SgmlPage implements Cloneable {
         }
     }
 
+    public HtmlForm getFormById(final String name) throws ElementNotFoundException {
+        final List forms = getDocumentHtmlElement().getHtmlElementsByAttribute("form", "id", name);
+        if (forms.size() == 0) {
+            throw new ElementNotFoundException("form", "id", name);
+        }
+        else {
+            return (HtmlForm) forms.get(0);
+        }
+    }
+
     /**
      * Return a list of all the forms in the page.
      * @return All the forms.

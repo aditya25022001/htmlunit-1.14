@@ -782,7 +782,7 @@ public class WindowTest extends WebTestCase {
      */
     public void testSetTimeout() throws Exception {
         final String content
-            = "<html><body><script language='JavaScript'>window.setTimeout('alert(\"Yo!\")',1);\n"
+            = "<html><body><script language='JavaScript'>window.setTimeout('alert(\"Yo!\")',10);\n"
             + "</script></body></html>";
 
         final List collectedAlerts = Collections.synchronizedList(new ArrayList());

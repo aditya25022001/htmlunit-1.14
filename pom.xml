@@ -23,7 +23,7 @@ The reference stays the maven 1 build.
 				<!-- Requires that the Maven snapshot repo be configured; see below. -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>2.2-SNAPSHOT</version>
+				<version>3.1.2</version>
 				<configuration>
 					<configLocation>checkstyle.xml</configLocation>
 					<suppressionsLocation>checkstyle_suppressions.xml</suppressionsLocation>
@@ -37,8 +37,8 @@ The reference stays the maven 1 build.
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
 					<!-- Update the links reference in javadoc and clover plugins when this changes -->
-					<source>1.4</source>
-					<target>1.4</target>
+					<source>8</source>
+					<target>8</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -70,23 +70,6 @@ The reference stays the maven 1 build.
 					</descriptors>
 				</configuration>
 			</plugin>
-			<plugin>
-				<!-- There is clover plugin in 'reporting' section -->
-				<artifactId>maven-clover-plugin</artifactId>
-				<groupId>com.atlassian.maven.plugins</groupId>
-				<configuration>
-					<licenseLocation>${basedir}/clover2.license</licenseLocation>
-					<jdk>1.4</jdk>
-				</configuration>
-				<executions>
-					<execution>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>instrument</goal>
-						</goals>
-					</execution>
-				</executions>
-        	</plugin>
 		</plugins>
 	</build>
 	<reporting>
@@ -138,7 +121,7 @@ The reference stays the maven 1 build.
 				<artifactId>maven-clover-plugin</artifactId>
 				<configuration>
 					<licenseLocation>${basedir}/clover2.license</licenseLocation>
-					<jdk>1.4</jdk>
+					<jdk>8</jdk>
 				</configuration>
 			</plugin>
  		</plugins>

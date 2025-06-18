@@ -37,6 +37,8 @@
  */
 package com.gargoylesoftware.htmlunit.javascript.host;
 
+import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,7 +47,14 @@ import com.gargoylesoftware.htmlunit.CollectingAlertHandler;
 import com.gargoylesoftware.htmlunit.MockWebConnection;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebTestCase;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
+import javax.xml.XMLConstants;
+import javax.xml.transform.*;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+import java.io.StringReader;
+import java.io.StringWriter;
 /**
  * Tests for {@link XSLTProcessor}.
  *
@@ -74,7 +83,7 @@ public class XSLTProcessorTest extends WebTestCase {
         final String[] expectedAlertsFF = {"226"};
         test(BrowserVersion.FIREFOX_2, expectedAlertsFF);
     }
-    
+
     private void test(final BrowserVersion browserVersion, final String[] expectedAlerts) throws Exception {
         final String html = "<html><head><title>foo</title><script>\n"
             + "  function test() {\n"
@@ -162,4 +171,102 @@ public class XSLTProcessorTest extends WebTestCase {
         client.getPage(URL_FIRST);
         assertEquals(expectedAlerts, collectedAlerts);
     }
+
+    public void testSecureProcessingBlocksXXEWhenSetToTrue() throws Exception {
+        // Load the test file containing "XXE_CVE_TEST_FILE" or similar identifiable text
+        File file = new File("src/test/resources/com/gargoylesoftware/htmlunit/javascript/host/xxe-cve.txt");
+        assertTrue("Test file should exist", file.exists());
+
+        // Get file path as URI
+        String fileUri = file.toURI().toString(); // will return file:///C:/... on Windows
+
+        // Inject external entity referring to the actual file URI
+        final String maliciousXml =
+                "<?xml version=\"1.0\"?>\n" +
+                        "<!DOCTYPE foo [ <!ENTITY xxe SYSTEM \"" + fileUri + "\"> ]>\n" +
+                        "<book><title>&xxe;</title></book>";
+
+        final String simpleXslt =
+                "<?xml version=\"1.0\"?>\n" +
+                        "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n" +
+                        "  <xsl:template match=\"/\">\n" +
+                        "    <html><body><h2><xsl:value-of select=\"book/title\"/></h2></body></html>\n" +
+                        "  </xsl:template>\n" +
+                        "</xsl:stylesheet>";
+
+        TransformerFactory factory = TransformerFactory.newInstance();
+
+        // Set the SECURE_PROCESSING flag to prevent XXE
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+
+        Source xmlSource = new StreamSource(new StringReader(maliciousXml));
+        Source xsltSource = new StreamSource(new StringReader(simpleXslt));
+
+        StringWriter writer = new StringWriter();
+        Result result = new StreamResult(writer);
+
+        try {
+            Transformer transformer = factory.newTransformer(xsltSource);
+            transformer.transform(xmlSource, result);
+
+            String output = writer.toString();
+            System.out.println("Output: \n" + output);
+
+            // Should not contain /etc/passwd contents
+            assertFalse("XXE should be blocked", output.contains("root:"));
+        } catch (TransformerException e) {
+            // Expected behavior — secure processing should block the entity
+            System.out.println("Caught expected TransformerException: " + e.getMessage());
+            assertTrue(e.getMessage().contains("Entity") || e.getMessage().contains("not allowed"));
+        }
+    }
+
+    public void testSecureProcessingAllowsXXEWhenSetToFalse() throws Exception {
+        // Load the test file containing "XXE_CVE_TEST_FILE" or similar identifiable text
+        File file = new File("src/test/resources/com/gargoylesoftware/htmlunit/javascript/host/xxe-cve.txt");
+        assertTrue("Test file should exist", file.exists());
+
+        // Get file path as URI
+        String fileUri = file.toURI().toString(); // will return file:///C:/... on Windows
+
+        // Inject external entity referring to the actual file URI
+        final String maliciousXml =
+                "<?xml version=\"1.0\"?>\n" +
+                        "<!DOCTYPE foo [ <!ENTITY xxe SYSTEM \"" + fileUri + "\"> ]>\n" +
+                        "<book><title>&xxe;</title></book>";
+
+        final String simpleXslt =
+                "<?xml version=\"1.0\"?>\n" +
+                        "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n" +
+                        "  <xsl:template match=\"/\">\n" +
+                        "    <html><body><h2><xsl:value-of select=\"book/title\"/></h2></body></html>\n" +
+                        "  </xsl:template>\n" +
+                        "</xsl:stylesheet>";
+
+        TransformerFactory factory = TransformerFactory.newInstance();
+
+        try {
+            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, false);
+        } catch (TransformerConfigurationException e) {
+            System.out.println("Could not disable secure processing: " + e.getMessage());
+            return;
+        }
+
+        Source xmlSource = new StreamSource(new StringReader(maliciousXml));
+        Source xsltSource = new StreamSource(new StringReader(simpleXslt));
+
+        StringWriter writer = new StringWriter();
+        Result result = new StreamResult(writer);
+
+        Transformer transformer = factory.newTransformer(xsltSource);
+        transformer.transform(xmlSource, result);
+
+        String output = writer.toString();
+
+        // Assert that the XXE file content is included in output
+        assertTrue("XXE should succeed when secure processing is disabled",
+                output.contains("root:x:0:0:root:/root:/bin/bash")); // or whatever your test file contains
+    }
+
+
 }

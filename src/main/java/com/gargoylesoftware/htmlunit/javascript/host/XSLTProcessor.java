@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.Result;
 import javax.xml.transform.Source;
@@ -132,7 +133,10 @@ public class XSLTProcessor extends SimpleScriptable {
 
             final DOMResult result = new DOMResult(containerElement);
  
-            final Transformer transformer = TransformerFactory.newInstance().newTransformer(xsltSource);
+            final TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+
+            final Transformer transformer = transformerFactory.newTransformer(xsltSource);
             for (final Iterator keys = parameters_.keySet().iterator(); keys.hasNext();) {
                 final String qualifiedName = (String) keys.next();
                 transformer.setParameter(qualifiedName, parameters_.get(qualifiedName));

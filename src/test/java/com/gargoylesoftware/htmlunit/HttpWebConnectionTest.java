@@ -37,12 +37,7 @@
  */
 package com.gargoylesoftware.htmlunit;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -397,20 +392,36 @@ public class HttpWebConnectionTest extends BaseTestCase {
      * @throws Exception if the test fails
      */
     public void testDesignedForExtension() throws Exception {
-        server_ = startWebServer("./");
-
-        final WebClient webClient = new WebClient();
-        final boolean[] tabCalled = {false};
-        final WebConnection myWebConnection = new HttpWebConnection(webClient) {
-            protected HttpClient createHttpClient() {
-                tabCalled[0] = true;
-                return new HttpClient();
+        final File testFile = new File("TESTFILE");
+        try{
+            try (FileWriter writer = new FileWriter(testFile)) {
+                writer.write("Dummy content");
             }
-        };
+            server_ = startWebServer("./");
 
-        webClient.setWebConnection(myWebConnection);
-        webClient.getPage("http://localhost:" + PORT + "/README");
-        assertTrue("createHttpClient has not been called", tabCalled[0]);
+            final WebClient webClient = new WebClient();
+            final boolean[] tabCalled = {false};
+            final WebConnection myWebConnection = new HttpWebConnection(webClient) {
+                protected HttpClient createHttpClient() {
+                    tabCalled[0] = true;
+                    return new HttpClient();
+                }
+            };
+
+            webClient.setWebConnection(myWebConnection);
+            webClient.getPage("http://localhost:" + PORT + "/TESTFILE");
+            assertTrue("createHttpClient has not been called", tabCalled[0]);
+
+
+        } finally {
+            boolean result = false;
+            if (testFile.exists()) {
+                result = testFile.delete();
+            }
+            if (!result) {
+                System.err.println("Warning: Failed to delete TESTFILE");
+            }
+        }
     }
 
     /**
